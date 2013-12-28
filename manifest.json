@@ -1,7 +1,7 @@
 {
   "name": "Last.FM Normalizer",
   "description": "Normalizes Top Artist rankings by time spent listening instead of total plays.",
-  "version": "1.0",
+  "version": "1.0.1",
   "permissions": [
     "activeTab",
     "webRequest",
