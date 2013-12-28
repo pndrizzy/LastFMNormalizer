@@ -316,7 +316,14 @@ function loadPages(timeframe, userName) {
     //Create the day, month year tabs
     var horizontalOptions = document.createElement("div");
     horizontalOptions.className="horizontalOptions clearit";
-    horizontalOptions.innerHTML = '<ul id="normalizer_tabs"><li class="first current chartweek"><a id="7day">Last 7 days</a></li><li class="chart1month"><a id="1month">Last month</a></li><li class="chart3month"><a id="3months">Last 3 months</a><li class="chart6month"><a id="6months">Last 6 months</a></li><li class="chartyear"><a id="1year">Last 12 months</a></li><li class="chartoverall"><a id="overall">Overall</a></li></ul>';
+    horizontalOptions.innerHTML = '<ul id="normalizer_tabs">' +
+                                  '<li class="first current chartweek"><a id="7day">Last 7 days</a></li>' + 
+                                  '' + //taken out until Last.FM fixes their API <li class="chart1month"><a id="1month">Last month</a></li>
+                                  '<li class="chart3month"><a id="3months">Last 3 months</a></li>' +
+                                  '<li class="chart6month"><a id="6months">Last 6 months</a></li>' + 
+                                  '<li class="chartyear"><a id="1year">Last 12 months</a></li>' +
+                                  '<li class="chartoverall"><a id="overall">Overall</a></li>' +
+                                  '</ul>';
 
     //create a div to hold our table
     var divTable = document.createElement("div");
@@ -352,10 +359,11 @@ function loadPages(timeframe, userName) {
         document.getElementById("normalizer_prev_link").style.backgroundPosition = "left top";
         document.getElementById("normalizer_prev_link").style.paddingLeft = "18px";
         current_page++;
-        if(pages[current_page + 1] == undefined) {
-            next.innerHTML = "";
-        }
+        
         loadTable(current_page);
+        if(pages[current_page + 1] == undefined) {
+            this.innerHTML = "";
+        } 
         return false;
     };
     //when prev is clicked, update the table
@@ -363,11 +371,10 @@ function loadPages(timeframe, userName) {
         next.innerHTML = "<a>Next Page</a>";
         next.className = "moduleOptions";
         current_page--;
-        if(current_page - 1 == 0) {
-            prev.innerHTML = "";
-        }
-        
         loadTable(current_page);
+        if(current_page - 1 == 0) {
+            this.innerHTML = "";
+        }
         return false;
     };
     
@@ -394,12 +401,13 @@ function loadPages(timeframe, userName) {
         loadTable(1);
     }
     
+    /* Taken out until Last.FM Fixes their API 
     document.getElementById("1month").onclick = function() {
         removeCurrentClass();       
         this.parentNode.classList.add("current");
         pages = loadPages("1month", userName);
         loadTable(1);
-    }
+    } */
     
     document.getElementById("3months").onclick = function() {
         removeCurrentClass();       
