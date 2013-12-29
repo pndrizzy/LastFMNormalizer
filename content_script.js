@@ -17,6 +17,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
+
+
+
+var DEBUG_MODE = 0; //1 == DEBUG
 function httpGet(url) {
     var xmlHttp = null;
     xmlHttp = new XMLHttpRequest();
@@ -93,95 +97,147 @@ function sort(artistMap) {
     return sortedArray;
 }
 
+var TOTAL_RESPONSES = 0;
+var artistMap = {};
+var gettingPages = false;
 function getPages(timeframe, userName) {
 
-    //pages will be an array of the pages of results, each 10 artists long. So if the timeframe has 100 artists, then there will be 10 pages.
-    var pages = [];
+    gettingPages = true;
     
-    //a map that will hold artist to play duration information; ex { The Beatles : 1000, The Doors : 500 } 
-    var artistMap = {};
+    
+    //tempPages will be an array of the pages of results, each 10 artists long. So if the timeframe has 100 artists, then there will be 10 pages.
+    var tempPages = [];
+    TOTAL_RESPONSES = 0;
+    //a map that will hold artist to play duration information; ex { The Beatles : 1000, The Doors : 100 } 
     
     //current page we are getting from the API
     var page = 1;
     
-    //We need to know how many tracks the user has played within this timeframe. Last.FM Api times out at large requests, so we will request in chunks of 750 tracks, so we 
+    //We need to know how many tracks the user has played within this timeframe. Last.FM Api times out at large requests, so we will request in chunks of 100 tracks, so we 
     //need to know how many trequests we are going to make
     var getTotalPagesRequest = httpGet("http://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=" + userName + "&api_key=30034e98a7134350b2c8153d313d17b9&format=json&period=" + timeframe + "&limit=1");
     
     //Read the response about how many total there are
-    var totalTracks = JSON.parse(getTotalPagesRequest)["toptracks"]["@attr"]["total"];
+    try {
+        var totalTracks = JSON.parse(getTotalPagesRequest)["toptracks"]["@attr"]["total"];
+        //Get the whole number plus one: thats how many pages there are for totalTracks tracs
+        var totalPages = ~~((totalTracks / 100) + 1);
+        //Let's do it: let's loop totalPages times! 
+    } catch(e) {
+        gettingPages = false;
+        tempPages[1] = [];
+        tempPages[1].push(["None", 0]);
+        pages = tempPages;
+        loadTable(1);
+    }
     
-    //Get the whole number plus one: thats how many pages there are for totalTracks tracs
-    var totalPages = ~~((totalTracks / 750) + 1);
+    var loading = document.getElementById("loading_div");
+    var table = document.getElementById("normalizer_table");
+    if(loading && table) {
+        table.innerHTML = '';
+        loading.innerHTML = '<progress id="normalizer_progress" value="1" max="' + (totalPages+1) + '"></progress>';
+    }
     
-    //Let's do it: let's loop totalPages times! 
     for(var i = 0; i < totalPages; i++) {
     
     
-        //Make the request for 750 tracks
+        //Make the request for 100 tracks
         try {
-            var results = httpGet("http://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=" + userName + "&api_key=30034e98a7134350b2c8153d313d17b9&format=json&period=" + timeframe + "&limit=750&page=" + page++);
+          var request = null;
+             request = new XMLHttpRequest();
+             request.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    
+                    TOTAL_RESPONSES++;
+                    
+                    document.getElementById("normalizer_progress").value = TOTAL_RESPONSES;
+                    
+                    this.onreadystatechange = null;
+                    var results = this.responseText;
+                    //parse the JSON
+                    var jsonResults = JSON.parse(results);
+                    var tracks = jsonResults["toptracks"]["track"];
+                    
+                    //It's possible that there were no results (ex: user hasn't played anything in last 7 days)
+                    if(tracks == undefined) {
+                            gettingPages = false;
+                            tempPages[1] = [];
+                            tempPages[1].push(["None", 0]);
+                            pages = tempPages;
+                            loadTable(1);
+                    }
+                    
+                    //Go through each track and update the artist map
+                    for(var j = 0; j < tracks.length; j++) {
+                        
+                        //get the information about the track
+                        var track = tracks[j];
+                        var artistName = track["artist"]["name"];
+                        var duration = track["duration"];
+                        var playCount = parseInt(track["playcount"]);
+                        
+                       
+                        //multiply the song duration by the playcount, because the song was listened to for that many seconds
+                        if(duration != "") {
+                           duration = parseInt(duration) * playCount;
+                        } else {
+                            duration = 150 * playCount; //Last.FM does not know durations of some tracks, so just assume that the tracks are 3 minutes and 30 seconds
+                        }
+                        
+                        //If the artist is already in the map, just increase that value. Otherwise, put it in the map 
+                        if(artistName in artistMap) {
+                            artistMap[artistName] += duration;
+                        } else {
+                            artistMap[artistName] = duration;
+                        }
+                        
+                    } 
+                    //sort the map. We don't need quick access anymore, so we can just convert it to an array
+                    sortedMap = sort(artistMap);
+                    
+                    //now lets break it up into pages. We're going to waste tempPages[0] because we want easy access; tempPages[1] is the first page.
+                    var pageNum = 0;
+                    for(var i = 0; i < sortedMap.length; i++) {
+                        //If we're at a multiple of 10, increase the page number and put an empty array there.
+                        if(i % 10 == 0) {
+                            pageNum++;
+                            tempPages[pageNum] = [];
+                        }
+                        tempPages[pageNum].push(sortedMap[i]);
+                    }
+                    
+                    pages = tempPages;
+
+                    
+                    loadTable(1);
+                    if(TOTAL_RESPONSES == totalPages) {
+                    
+                        if(loading) {
+                            loading.innerHTML = '';
+                        }
+                    
+                        gettingPages = false;
+                        localStorage["pages" + timeframe + "_" + userName] = JSON.stringify(pages);
+                        localStorage["pages" + timeframe + "_" + userName + "_date"] = Date.now();
+                    }
+                }
+             }; 
+             var url = "http://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=" + userName + "&api_key=30034e98a7134350b2c8153d313d17b9&format=json&period=" + timeframe + "&limit=100&page=" + page++;
+             request.open("GET", url, true);
+             request.send(null);
+
         } catch(e) {
             //If something went wrong, alert the user and return
-            pages[1] = [];
-            pages[1].push(["Error getting response!", 0]);
-            return pages;
+                
+            gettingPages = false;
+            tempPages[1] = [];
+            tempPages[1].push(["Error getting response!", 0]);
+            pages = tempPages;
+            loadTable(1);
         }
-        
-        //parse the JSON
-        var jsonResults = JSON.parse(results);
-        var tracks = jsonResults["toptracks"]["track"];
-        
-        //It's possible that there were no results (ex: user hasn't played anything in last 7 days)
-        if(tracks == undefined) {
-            pages[1] = [];
-            pages[1].push(["None", 0]);
-            return pages;
-        }
-        
-        //Go through each track and update the artist map
-        for(var j = 0; j < tracks.length; j++) {
-            
-            //get the information about the track
-            var track = tracks[j];
-            var artistName = track["artist"]["name"];
-            var duration = track["duration"];
-            var playCount = parseInt(track["playcount"]);
-            
-           
-            //multiply the song duration by the playcount, because the song was listened to for that many seconds
-            if(duration != "") {
-               duration = parseInt(duration) * playCount;
-            } else {
-                duration = 150 * playCount; //Last.FM does not know durations of some tracks, so just assume that the tracks are 3 minutes and 30 seconds
-            }
-            
-            //If the artist is already in the map, just increase that value. Otherwise, put it in the map 
-            if(artistName in artistMap) {
-                artistMap[artistName] += duration;
-            } else {
-                artistMap[artistName] = duration;
-            }
-            
-        } 
-    
-    
     }
     
-    //sort the map. We don't need quick access anymore, so we can just convert it to an array
-    artistMap = sort(artistMap);
     
-    //now lets break it up into pages. We're going to waste pages[0] because we want easy access; pages[1] is the first page.
-    var pageNum = 0;
-    for(var i = 0; i < artistMap.length; i++) {
-        //If we're at a multiple of 10, increase the page number and put an empty array there.
-        if(i % 10 == 0) {
-            pageNum++;
-            pages[pageNum] = [];
-        }
-        pages[pageNum].push(artistMap[i]);
-    }
-    return pages;
 }
 
 //Used for updating the table when changing a timeframe or page number
@@ -244,6 +300,7 @@ function removeCurrentClass() {
 }
 
 function isCacheUsable(timeframe, userName) {
+    if(DEBUG_MODE == 1) return false;
     
     //get it out of local storage
     var pages = localStorage["pages" + timeframe + "_" + userName];
@@ -293,18 +350,29 @@ function isCacheUsable(timeframe, userName) {
 function loadPages(timeframe, userName) {
     //We might have the page in localStorage. In order to get better performance, we "cache" results.
     
-    var pages;
+    artistMap = {};
     //if we can get it from the local storage, do it.
     if(isCacheUsable(timeframe, userName)) {
         pages = JSON.parse(localStorage["pages" + timeframe + "_" + userName]);
+        loadTable(1);
     } else {
         //we actually need to make a web request. make the request, and cache it.
-        pages = getPages(timeframe, userName);
-        localStorage["pages" + timeframe + "_" + userName] = JSON.stringify(pages);
-        localStorage["pages" + timeframe + "_" + userName + "_date"] = Date.now();
+        getPages(timeframe, userName);
     }
     return pages;
 }
+
+
+
+    //loading bar
+    var css = 'progress {appearance: none; -webkit-appearance: none;display: block;width: 50%;height: 18px;margin: 20px auto;}progress::-webkit-progress-bar {background: #EBEBEB;border-radius: 3px;}progress::-webkit-progress-value {background: #73B6E3;border-radius: 3px;}progress:not([value])::-webkit-progress-bar {background:#fdd;}';
+    var head = document.head;
+    var style = document.createElement("style");
+    style.type = "text/css";
+    style.appendChild(document.createTextNode(css));
+    head.appendChild(style);
+    
+    
     //last.FM has the userName in the second H1 element. Get the username for this profile.
     var userName = document.getElementsByTagName("h1")[1].innerHTML.trim();
     
@@ -328,13 +396,13 @@ function loadPages(timeframe, userName) {
     //create a div to hold our table
     var divTable = document.createElement("div");
     divTable.className = "module-body chart chartoverall current";
+    var loadingDiv = document.createElement("div");
+    loadingDiv.id = "loading_div";
     var table = document.createElement("table");
     table.className = "candyStriped chart";
     table.id = "normalizer_table";
+    divTable.appendChild(loadingDiv);
     divTable.appendChild(table);
-    
-    //load the pages
-    var pages = loadPages("7day", userName);
     
     //create the navigation (next, previous) for our info
     
@@ -395,10 +463,10 @@ function loadPages(timeframe, userName) {
 
     //create the onclick method for each of the tabs
     document.getElementById("7day").onclick = function() {
+        if(gettingPages) return false;
         removeCurrentClass();
         this.parentNode.classList.add("current");
         pages = loadPages("7day", userName);
-        loadTable(1);
     }
     
     /* Taken out until Last.FM Fixes their API 
@@ -410,32 +478,36 @@ function loadPages(timeframe, userName) {
     } */
     
     document.getElementById("3months").onclick = function() {
+        if(gettingPages) return false;
         removeCurrentClass();       
         this.parentNode.classList.add("current");
         pages = loadPages("3months", userName);
-        loadTable(1);
     }
     
     document.getElementById("6months").onclick = function() {
+        if(gettingPages) return false;
         removeCurrentClass();       
         this.parentNode.classList.add("current");
         pages = loadPages("6months", userName);
-        loadTable(1);
     }
     
     document.getElementById("1year").onclick = function() {
+        if(gettingPages) return false;
         removeCurrentClass();       
         this.parentNode.classList.add("current");
         pages = loadPages("1year", userName);
-        loadTable(1);
     }
     
     document.getElementById("overall").onclick = function() {
+        if(gettingPages) return false;
         removeCurrentClass();       
         this.parentNode.classList.add("current");
         pages = loadPages("overall", userName);
-        loadTable(1);
     }
     
+    
+    
+    //load the pages
+    var pages = loadPages("7day", userName);
+    
     //put the data into the table
-    loadTable(1);
