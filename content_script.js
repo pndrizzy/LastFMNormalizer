@@ -136,6 +136,10 @@ function getPages(timeframe, userName) {
         loadTable(1);
     }
     
+    if(totalTracks == 0 || totalTracks === undefined) {
+        //no tracks were listened to during this time frame
+        return;
+    }
     var loading = document.getElementById("loading_div");
     var table = document.getElementById("normalizer_table");
     if(loading && table) {
@@ -280,7 +284,7 @@ function loadTable(page) {
             trClass = "odd"
         }
         
-        table.innerHTML += '<tr class="' + trClass + '"><td class="positionCell">' + rank++ + '</td><td class="subjectCell" title="' + artists[i][0] + '"><div><a>' + artists[i][0] + '</a></div></td><td class="chartbarCell"><div style="width:' + width + '%" class="chartbar"><a><span title="' + secondsToString(artists[i][1]) + '">' + secondsToString2(artists[i][1]) + '</span></a></div></td></tr>';
+        table.innerHTML += '<tr class="' + trClass + '"><td class="positionCell">' + rank++ + '</td><td class="subjectCell" title="' + artists[i][0] + '"><div><a href="#" onclick="return false;">' + artists[i][0] + '</a></div></td><td class="chartbarCell"><div style="width:' + width + '%" class="chartbar"><a href="#" onclick="return false;"><span title="' + secondsToString(artists[i][1]) + '">' + secondsToString2(artists[i][1]) + '</span></a></div></td></tr>';
     }
 
     //end the tbody
@@ -290,7 +294,7 @@ function loadTable(page) {
     if(pages.length > 2) {
     
         //theres always a next page option, put it there
-        next.innerHTML = "<a>Next Page</a>";
+        next.innerHTML = "<a href=\"#\" onclick=\"return false;\">Next Page</a>";
         next.className = "moduleOptions";
         
     }
@@ -384,18 +388,18 @@ function loadPages(timeframe, userName) {
     //Create a heading element for our new addition to the page
     var heading = document.createElement("h2");
     heading.className = "heading";
-    heading.innerHTML = '<span class="h2Wrapper"><a href="#" title>Top Artists (Normalized)</a></span>';
+    heading.innerHTML = '<span class="h2Wrapper"><a href="#" onclick="return false;" href="#" onclick="return false;" title>Top Artists (Normalized)</a></span>';
 
     //Create the day, month year tabs
     var horizontalOptions = document.createElement("div");
     horizontalOptions.className="horizontalOptions clearit";
     horizontalOptions.innerHTML = '<ul id="normalizer_tabs">' +
-                                  '<li class="first current chartweek"><a id="7day">Last 7 days</a></li>' + 
-                                  '' + //taken out until Last.FM fixes their API <li class="chart1month"><a id="1month">Last month</a></li>
-                                  '<li class="chart3month"><a id="3months">Last 3 months</a></li>' +
-                                  '<li class="chart6month"><a id="6months">Last 6 months</a></li>' + 
-                                  '<li class="chartyear"><a id="1year">Last 12 months</a></li>' +
-                                  '<li class="chartoverall"><a id="overall">Overall</a></li>' +
+                                  '<li class="first current chartweek"><a href="#" onclick="return false;" id="7day">Last 7 days</a></li>' + 
+                                  //removed, api broken'<li class="chart1month"><a href="#" onclick="return false;" id="1month">Last month</a></li>' +
+                                  '<li class="chart3month"><a href="#" onclick="return false;" id="3months">Last 3 months</a></li>' +
+                                  '<li class="chart6month"><a href="#" onclick="return false;" id="6months">Last 6 months</a></li>' + 
+                                  '<li class="chartyear"><a href="#" onclick="return false;" id="1year">Last 12 months</a></li>' +
+                                  '<li class="chartoverall"><a href="#" onclick="return false;" id="overall">Overall</a></li>' +
                                   '</ul>';
 
     //create a div to hold our table
@@ -425,7 +429,7 @@ function loadPages(timeframe, userName) {
     
     //when next is clicked, update the table
     next.onclick = function() {
-        prev.innerHTML = "<a id=\"normalizer_prev_link\">Previous Page</a>";
+        prev.innerHTML = "<a href=\"#\" onclick=\"return false;\" id=\"normalizer_prev_link\">Previous Page</a>";
         prev.className = "moduleOptions";
         prev.style.float = "left";
         document.getElementById("normalizer_prev_link").style.backgroundImage = "url(" + chrome.extension.getURL("arrow_left.png") + ")";
@@ -441,7 +445,7 @@ function loadPages(timeframe, userName) {
     };
     //when prev is clicked, update the table
     prev.onclick = function() {
-        next.innerHTML = "<a>Next Page</a>";
+        next.innerHTML = "<a href=\"#\" onclick=\"return false;\">Next Page</a>";
         next.className = "moduleOptions";
         current_page--;
         loadTable(current_page);
@@ -474,12 +478,14 @@ function loadPages(timeframe, userName) {
         pages = loadPages("7day", userName);
     }
     
+    /* Removed until it works. Last FM's API is broken. 
     document.getElementById("1month").onclick = function() {
         removeCurrentClass();       
         this.parentNode.classList.add("current");
         pages = loadPages("1month", userName);
         loadTable(1);
     }
+    */
     
     document.getElementById("3months").onclick = function() {
         if(gettingPages) return false;
