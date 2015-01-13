@@ -113,9 +113,14 @@ function getPages(timeframe, userName) {
     //current page we are getting from the API
     var page = 1;
     
+    var tf = timeframe;
+    if(tf != "") {
+        tf = "&period=" + timeframe;
+    }
+    
     //We need to know how many tracks the user has played within this timeframe. Last.FM Api times out at large requests, so we will request in chunks of 100 tracks, so we 
     //need to know how many trequests we are going to make
-    var getTotalPagesRequest = httpGet("http://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=" + userName + "&api_key=30034e98a7134350b2c8153d313d17b9&format=json&period=" + timeframe + "&limit=1");
+    var getTotalPagesRequest = httpGet("http://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=" + userName + "&api_key=30034e98a7134350b2c8153d313d17b9&format=json" + tf + "&limit=1");
     
     //Read the response about how many total there are
     try {
@@ -469,40 +474,39 @@ function loadPages(timeframe, userName) {
         pages = loadPages("7day", userName);
     }
     
-    /* Taken out until Last.FM Fixes their API 
     document.getElementById("1month").onclick = function() {
         removeCurrentClass();       
         this.parentNode.classList.add("current");
         pages = loadPages("1month", userName);
         loadTable(1);
-    } */
+    }
     
     document.getElementById("3months").onclick = function() {
         if(gettingPages) return false;
         removeCurrentClass();       
         this.parentNode.classList.add("current");
-        pages = loadPages("3months", userName);
+        pages = loadPages("3month", userName);
     }
     
     document.getElementById("6months").onclick = function() {
         if(gettingPages) return false;
         removeCurrentClass();       
         this.parentNode.classList.add("current");
-        pages = loadPages("6months", userName);
+        pages = loadPages("6month", userName);
     }
     
     document.getElementById("1year").onclick = function() {
         if(gettingPages) return false;
         removeCurrentClass();       
         this.parentNode.classList.add("current");
-        pages = loadPages("1year", userName);
+        pages = loadPages("12month", userName);
     }
     
     document.getElementById("overall").onclick = function() {
         if(gettingPages) return false;
         removeCurrentClass();       
         this.parentNode.classList.add("current");
-        pages = loadPages("overall", userName);
+        pages = loadPages("", userName);
     }
     
     

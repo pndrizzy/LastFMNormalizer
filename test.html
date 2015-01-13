@@ -1,0 +1,35 @@
+<doctype html>
+<html>
+<head>
+<script src="jquery-1.11.0.min.js"></script>
+<script src="async.js"></script>
+<script>
+    var calls = [];
+    var count = 10;
+    var timeframe = "3months";
+    var userName = "bdkmvibe";
+    
+    for (var i = 0; i < count; i++) {
+        var url = "http://ws.audioscrobbler.com/2.0/?method=user.gettoptracks&user=" + userName + "&api_key=30034e98a7134350b2c8153d313d17b9&format=json&period=" + timeframe + "&limit=100&page=" + i;
+        calls.push(function(callback) {
+            $.get(url, function(data) {
+                return data;
+            });
+        });
+    }
+    
+    async.parallel(calls, function(err, result) {
+        if(err) {
+            alert("There was an error");
+        } else {
+            console.log(result);
+            alert(result);
+        }
+    });
+    
+</script>
+</head>
+<body>
+
+</body>
+</html>
